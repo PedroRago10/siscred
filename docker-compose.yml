@@ -1,0 +1,72 @@
+version: "3.8"
+services:
+  # Banco de dados
+  db-siscred:
+    platform: linux/x86_64
+    image: mysql:5.7
+    container_name: db-siscred
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - ./data/mysql:/docker-entrypoint-initdb.d
+    networks:
+      - application
+  phpmyadmin-db-siscred:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin-db-siscred
+    ports:
+      - "8080:80"
+    links:
+      - "db-siscred:db"
+    networks:
+      - application
+  app-siscred:
+    build:
+      args:
+        user: ${USER}
+        uid: ${UID}
+      context: ./
+      dockerfile: Dockerfile
+    image: ${APP_NAME}
+    container_name: app-siscred
+    restart: unless-stopped
+    expose:
+      - 80
+    environment:
+      - VIRTUAL_HOST=http://localhost/
+    working_dir: /var/www/
+    volumes:
+      - ./:/var/www
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    networks:
+      - application
+  nginx:
+    image: nginx:1.19.4-alpine
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www
+      - ./data/nginx:/etc/nginx/conf.d
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    ports:
+      - "80:80"
+      # - "443:443"
+    command: '/bin/sh -c ''while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
+    networks:
+      - application
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+networks:
+  application:
+    name: "siscred_network"
