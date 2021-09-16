@@ -15,7 +15,6 @@
         "laravel/tinker": "^2.5",
         "laravel/ui": "^3.2",
         "laravelcollective/html": "^6.2",
-        "spatie/crawler": "^6.0",
         "symfony/css-selector": "^5.3"
     },
     "require-dev": {
